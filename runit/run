@@ -7,6 +7,6 @@ if [ -w /proc/self/oom_score_adj ]; then
     echo -999 > /proc/self/oom_score_adj
 fi
 
-# Iniciar ananicy-cpp
+# Iniciar RamJet
 # -n -5 : Equivale a Nice=-5 (Alta prioridad)
 exec chpst -n -5 /usr/bin/ramjet start
