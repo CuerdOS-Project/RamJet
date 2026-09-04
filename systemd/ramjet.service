@@ -1,13 +1,12 @@
 [Unit]
 Description=ramjet - process priority daemon
-Documentation=https://github.com/Alecaishere/RamJet
+Documentation=https://github.com/CuerdOS-Project/RamJet
 After=multi-user.target
 Wants=multi-user.target
 
 [Service]
 Type=simple
-EnvironmentFile=-/etc/default/ramjet
-ExecStart=/usr/local/bin/ramjet -d ${RAMJET_CONFIG_DIR} ${RAMJET_OPTS}
+ExecStart=/usr/local/bin/ramjet
 Restart=on-failure
 RestartSec=5
 
@@ -15,15 +14,10 @@ RestartSec=5
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-NoNewPrivileges=false
 ReadWritePaths=/sys/fs/cgroup
-
-# Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=ramjet
-
-# Resource limits
 LimitNICE=true
 
 [Install]

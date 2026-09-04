@@ -1,34 +1,21 @@
 /*
  * RamJet - Rice clone in C
  * Copyright (c) 2026 - Ported from Rust by Alecaishere/CuerdOS Dev. Team
- *
- *
- * Configuration file parsing: walks /etc/ananicy.d for .rules, .types, .cgroups
- * files and parses each line as JSON, invoking a callback for each parsed object.
  */
-
 #ifndef RAMJET_PARSE_H
 #define RAMJET_PARSE_H
 
+#include <stddef.h>
 #include <stdio.h>
 
-/* Callback type: called for each parsed JSON object from a config line.
-   'json_line' is the raw JSON string, 'user_data' is caller-provided context.
-   Return 0 to continue, -1 to stop with error. */
 typedef int (*parse_line_cb)(const char *json_line, void *user_data);
 
-/* Parse a single opened file, line by line.
-   Skips blank lines and lines starting with '#'.
-   Calls 'cb' for each valid JSON line found.
-   Returns 0 on success, -1 on error. */
 int parse_file(FILE *fp, parse_line_cb cb, void *user_data);
-
-/* Walk 'root_dir' recursively, looking for files with extension 'ext'
-   (e.g. "rules", "types", "cgroups").
-   Opens each matching file and parses it with parse_file().
-   Returns 0 on success, -1 on fatal error (individual file errors are logged
-   but do not stop the walk). */
 int walk_config_dir(const char *root_dir, const char *ext,
                     parse_line_cb cb, void *user_data);
 
-#endif /* RAMJET_PARSE_H */
+/* Minimal JSON accessors for the flat Ananicy objects used by RamJet. */
+int json_get_string(const char *json, const char *key, char *out, size_t out_size);
+int json_get_int(const char *json, const char *key, long *out);
+
+#endif

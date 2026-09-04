@@ -1,49 +1,65 @@
 # RamJet
-Rice (Ananicy clone built in Rust) ported to C
 
-This is another auto nice daemon but with the speed of C execution and compatibility with Ananicy rules.
+RamJet is a small C daemon inspired by Rice/Ananicy. It scans `/proc` and applies Ananicy-style `.rules`, `.types` and `.cgroups` definitions.
 
-## How to install on different distros:
+## Build
 
-### 1. Install the required dependencies:
-# Debian / Ubuntu
-```bash
-sudo apt install gcc make libc6-dev linux-headers-generic
-```
-# Fedora / RHEL
-```bash
-sudo dnf install gcc make glibc-devel kernel-headers
-```
-# Arch Linux
-```bash
-sudo pacman -S gcc make glibc linux-headers
-```
-# Alpine
-```bash
-sudo apk add gcc make musl-dev linux-headers
-```
+Dependencies are only the C toolchain and Linux headers:
 
-### 2. Clone this repository
-```bash
-https://github.com/Alecaishere/RamJet.git
-```
-
-### 3. Go to the directory
-
-Open a terminal an proceed to compile with the command:
 ```bash
 make
+make test
 ```
 
-### 4. After compile:
+Install:
 
-Move ramjet binary to /usr/local/bin/
 ```bash
-sudo mv ramjet /usr/local/bin/
+sudo make install
 ```
 
-Move the .service file to /etc/systemd/system/ and enable it with:
+The daemon reads configuration from `/etc/ananicy.d` and runs in the foreground, which makes it suitable for systemd and runit.
+
+## Supported rule fields
+
+Rules support:
+
+- `name`
+- `type`
+- `nice` (`-20` to `19`)
+- `io-class` or `ioclass` (`realtime`, `best-effort`, `idle`)
+- `ionice` (`0` to `7`)
+- `cgroup`
+- `oom_score_adj` (`-1000` to `1000`)
+
+Types support the same scheduling fields and are inherited by rules when a rule does not define the corresponding value itself.
+
+## Cgroups
+
+Cgroup handling remains intentionally limited to the legacy v1 CPU controller at `/sys/fs/cgroup/cpu`. On systems using cgroup v2 only, RamJet starts normally but reports cgroups as unavailable.
+
+## Service files
+
+Systemd:
+
 ```bash
+sudo install -m 644 systemd/ramjet.service /etc/systemd/system/ramjet.service
+sudo systemctl daemon-reload
 sudo systemctl enable --now ramjet.service
 ```
-# Remember to disable Ananicy/Ananicy-cpp or Rice to avoid stability problems
+
+For runit, place the `runit/` directory under the appropriate service directory.
+
+## Changes in this version
+
+- Fixed Linux `ionice` class numbers.
+- Fixed the valid `nice` range.
+- Stopped processing the main thread twice.
+- Hardened `/proc` PID parsing against malformed/overflowing directory names.
+- Propagated scheduling/application errors instead of always returning success.
+- Added `oom_score_adj` application and inheritance.
+- Replaced shell-based `ionice` invocation with direct `execvp`.
+- Removed the bundled cJSON dependency in favor of a small parser for the flat Ananicy JSON objects RamJet consumes.
+- Made duplicate rule/type/cgroup definitions replace previous entries deterministically.
+- Prevented shutdown from deleting pre-existing cgroups.
+- Rejected unsafe cgroup names containing path separators.
+- Fixed stale systemd/runit paths and arguments.

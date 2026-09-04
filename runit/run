@@ -1,12 +1,8 @@
 #!/bin/sh
-# Redirigir stderr a stdout para que el logger lo capture
 exec 2>&1
 
-# Emulación de OOMScoreAdjust=-999 (Evita que el kernel lo mate por falta de RAM)
 if [ -w /proc/self/oom_score_adj ]; then
     echo -999 > /proc/self/oom_score_adj
 fi
 
-# Iniciar RamJet
-# -n -5 : Equivale a Nice=-5 (Alta prioridad)
-exec chpst -n -5 /usr/bin/ramjet start
+exec chpst -n -5 /usr/local/bin/ramjet
