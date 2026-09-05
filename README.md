@@ -1,6 +1,6 @@
 # RamJet
 
-RamJet is a small C daemon inspired by Rice/Ananicy. It scans `/proc` and applies Ananicy-style `.rules`, `.types` and `.cgroups` definitions.
+RamJet is a small C daemon inspired by Rice/Ananicy. It scans `/proc` and applies Ananicy-style `.rules`, `.types` definitions.
 
 ## Build
 
