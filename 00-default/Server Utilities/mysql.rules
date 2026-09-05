@@ -1,0 +1,2 @@
+# MySQL
+{ "name": "mysqld", "type": "BG_CPU" }

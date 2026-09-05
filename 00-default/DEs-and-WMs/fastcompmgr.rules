@@ -1,0 +1,2 @@
+# fastcompmgr - https://github.com/tycho-kirchner/fastcompmgr
+{ "name": "fastcompmgr", "type": "LowLatency_RT" }

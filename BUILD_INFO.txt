@@ -1,0 +1,12 @@
+RamJet fixed build
+Date: 2026-09-03
+Target: Linux x86_64 (build environment)
+
+Validation:
+- make
+- make test
+- make analyze (clang static analyzer)
+- ASan/UBSan build + tests (passed)
+
+The source tree intentionally does not include cJSON.c/cJSON.h: the original dependency was replaced by a small flat-JSON parser tailored to the Ananicy objects RamJet consumes.
+The cgroup implementation remains cgroup-v1 CPU-controller only.
