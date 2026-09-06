@@ -1,0 +1,12 @@
+# nwg-hello
+# https://github.com/nwg-piotr/nwg-hello
+{ "name": "nwg-hello", "type": "Service"}
+
+# nwg-bar
+# https://github.com/nwg-piotr/nwg-hello
+{ "name": "nwg-bar", "type": "Service"}
+
+# nwg-drawe
+# https://github.com/nwg-piotr/nwg-drawer
+{ "name": "nwg-drawer", "type": "Service"}
+

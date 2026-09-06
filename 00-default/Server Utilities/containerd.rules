@@ -1,0 +1,6 @@
+# Containerd
+{ "name": "containerd", "type": "BG_CPUIO" }
+
+# Containerd-shim-runc-v2
+{ "name": "containerd-shim-runc-v2", "type": "BG_CPU" }
+

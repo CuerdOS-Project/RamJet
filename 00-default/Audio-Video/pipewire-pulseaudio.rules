@@ -1,0 +1,8 @@
+# Pipewire
+{ "name": "pipewire", "type": "Player-Audio" }
+
+# Pipewire-pulse
+{ "name": "pipewire-pulse", "type": "Player-Audio" }
+
+# Pulseaudio
+{ "name": "pulseaudio", "type": "Player-Audio" }

@@ -1,0 +1,6 @@
+# Docker
+{ "name": "dockerd", "type": "BG_CPUIO" }
+
+# Docker-proxy
+{ "name": "docker-proxy", "type": "BG_CPU" }
+
