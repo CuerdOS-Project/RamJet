@@ -1,4 +1,2 @@
-# TLP and Throttled
-{ "name": "throttled", "type": "Service" }
+# TLP
 { "name": "tlp-pd", "type": "Service" }
-
