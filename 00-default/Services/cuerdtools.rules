@@ -1,0 +1,19 @@
+# debbie-qt - https://github.com/CuerdOS-Project/Debbie
+{ "name": "debbie-qt", "type": "Heavy_CPU" }
+
+# cuerdtoken-qt - https://github.com/CuerdOS-Project/CuerdToken
+{ "name": "cuerdtoken-qt", "type": "Heavy_CPU" }
+{ "name": "cuerdtoken-qt-applet", "type": "BG_CPUIO" }
+
+# eclair-qt - https://github.com/CuerdOS-Project/Eclair
+{ "name": "eclair-qt", "type": "Heavy_CPU" }
+
+# k-hello-qt - https://github.com/CuerdOS-Project/K-Hello
+{ "name": "k-hello-qt", "type": "Doc-View" }
+
+# yel-store-qt - https://github.com/CuerdOS-Project/Yelena-Store
+{ "name": "yel-store-qt", "type": "Heavy_CPU" }
+
+# snapway-qt - https://github.com/CuerdOS-Project/SnapWay
+{ "name": "yel-store-qt", "type": "BG_CPU" }
+
