@@ -1,2 +1,2 @@
 #!/bin/sh
-exec chpst -u svlog svlogd -tt /var/log/ramjet
+exec vlogger -t ramjet -p daemon
