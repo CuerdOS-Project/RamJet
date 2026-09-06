@@ -1,3 +1,0 @@
-# System daemon for cooling control and monitoring
-# https://gitlab.com/coolercontrol/coolercontrol
-{ "name": "coolercontrold", "type": "Service" }

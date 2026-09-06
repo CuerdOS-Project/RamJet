@@ -1,11 +1,19 @@
 # https://swaywm.org/
 { "name": "sway", "type": "LowLatency_RT" }
+{ "name": "swaybg", "type": "BG_CPUIO" }
 
 # Sway notification daemon
 # https://github.com/ErikReider/SwayNotificationCenter
 { "name": "swaync", "type": "Service" }
 { "name": "swaync-client", "type": "Service" }
 
+# SwayOSD
+{ "name": "swayosd-server", "type": "Service" }
+{ "name": "swayosd-libinput-backend", "type": "BG_CPUIO" }
+
 # Sway idle daemon
 # https://github.com/swaywm/swayidle
 { "name": "swayidle", "type": "Service" }
+
+# Autotiling
+{ "name": "autotiling", "type": "LowLatency_RT" }
