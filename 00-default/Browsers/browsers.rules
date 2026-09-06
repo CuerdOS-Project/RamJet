@@ -40,6 +40,7 @@
 
 # Vivaldi  - https://vivaldi.com/
 { "name": "vivaldi", "type": "Doc-View" }
+{ "name": "vivaldi-bin", "type": "Doc-View" }
 { "name": "vivaldi-snapshot", "type": "Doc-View" }
 
 ### Firefox-Based Browsers ###
