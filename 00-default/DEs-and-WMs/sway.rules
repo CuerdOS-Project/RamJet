@@ -15,5 +15,9 @@
 # https://github.com/swaywm/swayidle
 { "name": "swayidle", "type": "Service" }
 
+# Grim & Grimshot
+{ "name": "grimshot", "type": "LowLatency_RT" }
+{ "name": "grim", "type": "LowLatency_RT" }
+
 # Autotiling
 { "name": "autotiling", "type": "LowLatency_RT" }
