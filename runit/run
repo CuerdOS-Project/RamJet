@@ -5,4 +5,4 @@ if [ -w /proc/self/oom_score_adj ]; then
     echo -999 > /proc/self/oom_score_adj
 fi
 
-exec chpst -n -5 /usr/local/bin/ramjet
+exec chpst -n -5 /bin/ramjet
