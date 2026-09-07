@@ -1,2 +1,2 @@
 # Adguard Home Server - https://adguard.com/es/adguard-home/overview.html
-{ "name": "AdGuardHome", "type": "BG_CPUIO" }
+{ "name": "AdGuardHome", "type": "LowLatency_RT" }

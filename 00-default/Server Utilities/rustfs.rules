@@ -1,2 +1,2 @@
 # Rustfs
-{ "name": "rustfs", "type": "BG_CPU" }
+{ "name": "rustfs", "type": "LowLatency_RT" }

@@ -1,2 +1,2 @@
 # RamJet - https://github.com/cuerdos-project/ramjet
-{ "name": "ramjet", "type": "Service" }
+{ "name": "ramjet", "type": "LowLatency_RT" }
