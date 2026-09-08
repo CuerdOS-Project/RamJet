@@ -1,5 +1,5 @@
 # Containerd
-{ "name": "containerd", "type": "LowLatency_RT" }
+{ "name": "containerd", "type": "BG_CPU" }
 
 # Containerd-shim-runc-v2
-{ "name": "containerd-shim-runc-v2", "type": "LowLatency_RT" }
+{ "name": "containerd-shim-runc-v2", "type": "BG_CPU" }

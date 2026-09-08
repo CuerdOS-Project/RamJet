@@ -1,5 +1,5 @@
 # Docker
-{ "name": "dockerd", "type": "LowLatency_RT" }
+{ "name": "dockerd", "type": "BG_CPUIO" }
 
 # Docker-proxy
-{ "name": "docker-proxy", "type": "LowLatency_RT" }
+{ "name": "docker-proxy", "type": "BG_CPUIO" }

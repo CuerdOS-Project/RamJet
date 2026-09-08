@@ -1,2 +1,2 @@
 # MySQL
-{ "name": "mysqld", "type": "LowLatency_RT" }
+{ "name": "mysqld", "type": "BG_CPUIO" }
