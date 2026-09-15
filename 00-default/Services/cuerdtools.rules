@@ -15,5 +15,4 @@
 { "name": "yel-store-qt", "type": "Heavy_CPU" }
 
 # snapway-qt - https://github.com/CuerdOS-Project/SnapWay
-{ "name": "yel-store-qt", "type": "BG_CPU" }
-
+{ "name": "snapway-qt", "type": "BG_CPU" }
