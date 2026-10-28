@@ -10,7 +10,6 @@
 #include <sys/types.h>
 
 #define RULE_NAME_MAX 256
-#define RULE_CGROUP_MAX 256
 
 typedef struct {
     char name[RULE_NAME_MAX];
@@ -19,7 +18,6 @@ typedef struct {
     IoClass ioclass;
     int has_ioclass;
     int ionice;
-    char cgroup[RULE_CGROUP_MAX];
     int oom_score_adj;
     int has_oom_score_adj;
 } Rule;
@@ -38,13 +36,12 @@ void rule_map_init(RuleMap *map);
 void rule_map_free(RuleMap *map);
 void rule_map_insert(RuleMap *map, const Rule *r);
 const Rule *rule_map_get(const RuleMap *map, const char *name);
-int build_rules(RuleMap *map, const ProcTypeMap *types);
+int build_rules(RuleMap *map);
 
-const char *rule_effective_cgroup(const Rule *r, const ProcTypeMap *types);
 int rule_effective_nice(const Rule *r, const ProcTypeMap *types);
 int rule_effective_ioclass(const Rule *r, const ProcTypeMap *types, IoClass *out);
 int rule_effective_ionice(const Rule *r, const ProcTypeMap *types);
 int rule_effective_oom_score_adj(const Rule *r, const ProcTypeMap *types, int *out);
-int rule_apply(const Rule *r, const ProcTypeMap *types, pid_t pid);
+int rule_apply(const Rule *r, const ProcTypeMap *types, pid_t pid, int is_process_leader);
 
 #endif

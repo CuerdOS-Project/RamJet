@@ -11,7 +11,6 @@ SRCDIR  = src
 SOURCES = $(SRCDIR)/main.c \
           $(SRCDIR)/ramjet.c \
           $(SRCDIR)/rule.c \
-          $(SRCDIR)/cgroup.c \
           $(SRCDIR)/proc_type.c \
           $(SRCDIR)/parse.c \
           $(SRCDIR)/class.c
@@ -48,7 +47,7 @@ test: $(TARGET) tests/test_core
 
 tests/test_core: tests/test_core.c $(OBJECTS)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -Dmain=ramjet_main -c -o /tmp/ramjet_main_test.o src/main.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< src/parse.o src/class.o src/proc_type.o src/rule.o src/cgroup.o src/ramjet.o /tmp/ramjet_main_test.o $(LDLIBS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $< src/parse.o src/class.o src/proc_type.o src/rule.o  src/ramjet.o /tmp/ramjet_main_test.o $(LDLIBS)
 
 analyze:
 	clang --analyze $(CPPFLAGS) $(CFLAGS) $(SOURCES)

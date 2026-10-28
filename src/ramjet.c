@@ -50,7 +50,7 @@ static int iterate_threads(pid_t pid, const char *exe_name, proc_callback cb, vo
     while ((ent = readdir(d)) != NULL) {
         pid_t tid;
         if (parse_pid(ent->d_name, &tid) != 0 || tid == pid) continue;
-        int ret = cb(tid, exe_name, user_data);
+        int ret = cb(tid, pid, exe_name, user_data);
         if (ret != 0) {
             closedir(d);
             return ret;
@@ -75,11 +75,12 @@ int iterate_procs(proc_callback cb, void *user_data) {
         if (parse_pid(ent->d_name, &pid) != 0) continue;
         if (get_proc_exe(pid, exe_name, sizeof(exe_name)) != 0) continue;
 
-        int ret = cb(pid, exe_name, user_data);
-        if (ret != 0) {
+        int ret = cb(pid, pid, exe_name, user_data);
+        if (ret < 0) {
             closedir(proc_dir);
             return ret;
         }
+        if (ret > 0) continue; /* No matching rule: skip thread scan. */
         ret = iterate_threads(pid, exe_name, cb, user_data);
         if (ret != 0) {
             closedir(proc_dir);
@@ -93,27 +94,20 @@ int iterate_procs(proc_callback cb, void *user_data) {
 typedef struct {
     const RuleMap *rules;
     const ProcTypeMap *types;
-    CgroupMap *cgroups;
     int error_count;
 } ApplyContext;
 
-static int apply_rule_callback(pid_t pid, const char *exe_name, void *user_data) {
+static int apply_rule_callback(pid_t pid, pid_t tgid, const char *exe_name, void *user_data) {
     ApplyContext *ctx = user_data;
     const Rule *r = rule_map_get(ctx->rules, exe_name);
-    if (!r) return 0;
+    if (!r) return pid == tgid ? 1 : 0; /* No rule: skip this process's threads. */
 
-    if (rule_apply(r, ctx->types, pid) != 0) ctx->error_count++;
-
-    const char *cgroup_name = rule_effective_cgroup(r, ctx->types);
-    if (cgroup_name) {
-        const CgroupDef *cg = cgroup_map_get(ctx->cgroups, cgroup_name);
-        if (!cg || cgroup_apply(cg, pid) != 0) ctx->error_count++;
-    }
+    if (rule_apply(r, ctx->types, pid, pid == tgid) != 0) ctx->error_count++;
     return 0;
 }
 
-int apply_all_rules(const RuleMap *rules, const ProcTypeMap *types, CgroupMap *cgroups) {
-    ApplyContext ctx = { .rules = rules, .types = types, .cgroups = cgroups, .error_count = 0 };
+int apply_all_rules(const RuleMap *rules, const ProcTypeMap *types) {
+    ApplyContext ctx = { .rules = rules, .types = types, .error_count = 0 };
     if (iterate_procs(apply_rule_callback, &ctx) != 0) return ctx.error_count + 1;
     return ctx.error_count;
 }

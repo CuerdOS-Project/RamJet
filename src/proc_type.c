@@ -68,7 +68,7 @@ typedef struct { ProcTypeMap *map; } BuildTypesCtx;
 static int parse_type_line(const char *json_line, void *user_data) {
     BuildTypesCtx *ctx = user_data;
     ProcType pt;
-    char buf[PROC_TYPE_CGROUP_MAX];
+    char buf[32];
     long value;
     int found;
 
@@ -110,8 +110,6 @@ static int parse_type_line(const char *json_line, void *user_data) {
         pt.ionice = (int)value;
     }
 
-    found = json_get_string(json_line, "cgroup", buf, sizeof(buf));
-    if (found == 1) snprintf(pt.cgroup, sizeof(pt.cgroup), "%s", buf);
 
     if (json_get_int(json_line, "oom_score_adj", &value) != 1) {
         json_get_int(json_line, "oom_scote_adj", &value); /* Backward-compatible typo. */

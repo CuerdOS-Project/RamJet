@@ -28,14 +28,11 @@ Rules support:
 - `nice` (`-20` to `19`)
 - `io-class` or `ioclass` (`realtime`, `best-effort`, `idle`)
 - `ionice` (`0` to `7`)
-- `cgroup` (Not working and maybe will be deprecated in a future)
 - `oom_score_adj` (`-1000` to `1000`)
 
 Types support the same scheduling fields and are inherited by rules when a rule does not define the corresponding value itself.
 
-## Cgroups
-
-Cgroup handling remains intentionally limited to the legacy v1 CPU controller at `/sys/fs/cgroup/cpu`. On systems using cgroup v2 only, RamJet starts normally but reports cgroups as unavailable (and maybe will be deprecated in a future).
+RamJet only adjusts process/thread scheduling priorities and OOM score. It does not create, configure or migrate cgroups; `cgroup` fields in external Ananicy rules/types are ignored.
 
 ## Service files
 

@@ -7,7 +7,6 @@
 
 #include "class.h"
 #define PROC_TYPE_NAME_MAX 256
-#define PROC_TYPE_CGROUP_MAX 256
 
 typedef struct {
     char name[PROC_TYPE_NAME_MAX];
@@ -15,7 +14,6 @@ typedef struct {
     IoClass ioclass;
     int has_ioclass;
     int ionice;
-    char cgroup[PROC_TYPE_CGROUP_MAX];
     int oom_score_adj;
     int has_oom_score_adj;
 } ProcType;

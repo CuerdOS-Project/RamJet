@@ -23,7 +23,12 @@ int io_class_from_string(const char *s, IoClass *out) {
 }
 
 int io_class_to_num(IoClass c) {
-    return (int)c; /* Linux ionice uses 1=realtime, 2=best-effort, 3=idle. */
+    switch (c) {
+        case IO_CLASS_REALTIME: return 1;
+        case IO_CLASS_BEST_EFFORT: return 2;
+        case IO_CLASS_IDLE: return 3;
+        default: return -1;
+    }
 }
 
 const char *io_class_to_string(IoClass c) {

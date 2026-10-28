@@ -2,6 +2,9 @@
  * RamJet - Rice clone in C
  * Copyright (c) 2026 - Ported from Rust by Alecaishere/CuerdOS Dev. Team
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include "rule.h"
 #include "parse.h"
 #include <errno.h>
@@ -9,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
-#include <sys/wait.h>
+#include <linux/ioprio.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #define ANANICY_CONFIG_DIR "/etc/ananicy.d"
@@ -67,13 +71,6 @@ const Rule *rule_map_get(const RuleMap *map, const char *name) {
 const ProcType *rule_type(const Rule *r, const ProcTypeMap *types) {
     return (r && types && r->proc_type_name[0]) ?
         proc_type_map_get(types, r->proc_type_name) : NULL;
-}
-
-const char *rule_effective_cgroup(const Rule *r, const ProcTypeMap *types) {
-    const ProcType *pt;
-    if (r->cgroup[0]) return r->cgroup;
-    pt = rule_type(r, types);
-    return pt && pt->cgroup[0] ? pt->cgroup : NULL;
 }
 
 int rule_effective_nice(const Rule *r, const ProcTypeMap *types) {
@@ -144,39 +141,38 @@ static int apply_oom_score_adj(int value, pid_t pid) {
 }
 
 static int apply_ionice(IoClass ioclass, int ionice_val, pid_t pid) {
-    char class_arg[8], nice_arg[16], pid_arg[16];
-    snprintf(class_arg, sizeof(class_arg), "%d", io_class_to_num(ioclass));
-    snprintf(pid_arg, sizeof(pid_arg), "%d", pid);
+    int class_num = io_class_to_num(ioclass);
+    int data;
+    int priority;
 
-    if (ionice_val >= 0 && (ioclass == IO_CLASS_REALTIME || ioclass == IO_CLASS_BEST_EFFORT)) {
-        snprintf(nice_arg, sizeof(nice_arg), "%d", ionice_val);
-        char *const argv[] = { (char *)"ionice", (char *)"-c", class_arg,
-                               (char *)"-n", nice_arg, (char *)"-p", pid_arg, NULL };
-        pid_t child = fork();
-        if (child == 0) {
-            execvp(argv[0], argv);
-            _exit(127);
-        }
-        if (child < 0) return -1;
-        int status;
-        if (waitpid(child, &status, 0) < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) return -1;
+    switch (class_num) {
+        case IOPRIO_CLASS_RT:
+        case IOPRIO_CLASS_BE:
+            data = ionice_val >= 0 ? ionice_val : 4;
+            if (data > 7) {
+                errno = EINVAL;
+                return -1;
+            }
+            break;
+        case IOPRIO_CLASS_IDLE:
+            data = 7;
+            break;
+        default:
+            errno = EINVAL;
+            return -1;
+    }
+
+    priority = IOPRIO_PRIO_VALUE(class_num, data);
+    if (syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, (int)pid, priority) == 0)
         return 0;
-    }
 
-    char *const argv[] = { (char *)"ionice", (char *)"-c", class_arg,
-                           (char *)"-p", pid_arg, NULL };
-    pid_t child = fork();
-    if (child == 0) {
-        execvp(argv[0], argv);
-        _exit(127);
+    if (errno != ESRCH) {
+        fprintf(stderr, "[ramjet] warn: ioprio_set(%d) failed: %s\n",
+                pid, strerror(errno));
     }
-    if (child < 0) return -1;
-    int status;
-    if (waitpid(child, &status, 0) < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) return -1;
-    return 0;
+    return -1;
 }
-
-int rule_apply(const Rule *r, const ProcTypeMap *types, pid_t pid) {
+int rule_apply(const Rule *r, const ProcTypeMap *types, pid_t pid, int is_process_leader) {
     int errors = 0;
     int value;
     IoClass ioclass;
@@ -188,18 +184,19 @@ int rule_apply(const Rule *r, const ProcTypeMap *types, pid_t pid) {
     if (rule_effective_ioclass(r, types, &ioclass) == 0 &&
         apply_ionice(ioclass, rule_effective_ionice(r, types), pid) != 0) errors++;
 
-    if (rule_effective_oom_score_adj(r, types, &value) == 0 &&
+    /* oom_score_adj is process-wide; apply it via the thread-group leader only. */
+    if (is_process_leader && rule_effective_oom_score_adj(r, types, &value) == 0 &&
         apply_oom_score_adj(value, pid) != 0) errors++;
 
     return errors ? -1 : 0;
 }
 
-typedef struct { RuleMap *map; const ProcTypeMap *types; } BuildRulesCtx;
+typedef struct { RuleMap *map; } BuildRulesCtx;
 
 static int parse_rule_line(const char *json_line, void *user_data) {
     BuildRulesCtx *ctx = user_data;
     Rule r;
-    char buf[RULE_CGROUP_MAX];
+    char buf[32];
     long value;
     int found;
 
@@ -234,7 +231,6 @@ static int parse_rule_line(const char *json_line, void *user_data) {
         r.ionice = (int)value;
     }
 
-    if (json_get_string(json_line, "cgroup", r.cgroup, sizeof(r.cgroup)) < 0) return 0;
 
     if (json_get_int(json_line, "oom_score_adj", &value) == 1) {
         if (value < -1000 || value > 1000) {
@@ -249,8 +245,8 @@ static int parse_rule_line(const char *json_line, void *user_data) {
     return 0;
 }
 
-int build_rules(RuleMap *map, const ProcTypeMap *types) {
+int build_rules(RuleMap *map) {
     rule_map_init(map);
-    BuildRulesCtx ctx = { .map = map, .types = types };
+    BuildRulesCtx ctx = { .map = map };
     return walk_config_dir(ANANICY_CONFIG_DIR, "rules", parse_rule_line, &ctx);
 }

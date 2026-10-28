@@ -49,13 +49,6 @@ static int map_count_types(const ProcTypeMap *map) {
     return count;
 }
 
-static int map_count_cgroups(const CgroupMap *map) {
-    int count = 0;
-    for (int i = 0; i < CGROUP_MAP_SIZE; i++)
-        for (CgroupEntry *e = map->buckets[i]; e; e = e->next) count++;
-    return count;
-}
-
 int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
@@ -63,25 +56,18 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[ramjet] error: failed to register signal handlers: %s\n", strerror(errno));
         return 1;
     }
-
-    CgroupMap cgroups;
     ProcTypeMap types;
     RuleMap rules;
-
-    if (build_cgroups(&cgroups) != 0)
-        fprintf(stderr, "[ramjet] warn: cgroups unavailable or failed to load\n");
-    fprintf(stderr, "[ramjet] info: %d cgroups loaded\n", map_count_cgroups(&cgroups));
-
     if (build_types(&types) != 0)
         fprintf(stderr, "[ramjet] warn: failed to load some types\n");
     fprintf(stderr, "[ramjet] info: %d types loaded\n", map_count_types(&types));
 
-    if (build_rules(&rules, &types) != 0)
+    if (build_rules(&rules) != 0)
         fprintf(stderr, "[ramjet] warn: failed to load some rules\n");
     fprintf(stderr, "[ramjet] info: %d rules loaded\n", map_count_rules(&rules));
 
     while (!g_terminated) {
-        int errors = apply_all_rules(&rules, &types, &cgroups);
+        int errors = apply_all_rules(&rules, &types);
         if (errors > 0) fprintf(stderr, "[ramjet] warn: %d errors during rule application\n", errors);
         if (interruptible_sleep(5) < 0) {
             fprintf(stderr, "[ramjet] warn: sleep failed: %s\n", strerror(errno));
@@ -91,7 +77,6 @@ int main(int argc, char **argv) {
 
     rule_map_free(&rules);
     proc_type_map_free(&types);
-    cgroup_map_free(&cgroups);
     fprintf(stderr, "[ramjet] info: shutting down\n");
     return 0;
 }
