@@ -1,0 +1,17 @@
+# runsv
+{ "name": "runsv", "type": "BG_CPUIO" }
+
+# vlogger
+{ "name": "vlogger", "type": "BG_CPUIO" }
+
+# svlogd
+{ "name": "svlogd", "type": "BG_CPUIO" }
+
+# agetty
+{ "name": "agetty", "type": "BG_CPUIO" }
+
+# runsvdir
+{ "name": "runsvdir", "type": "BG_CPUIO" }
+
+# socklog
+{ "name": "socklog", "type": "BG_CPUIO" }

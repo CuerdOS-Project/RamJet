@@ -1,2 +1,5 @@
 # TLP
-{ "name": "tlp-pd", "type": "Service" }
+{ "name": "tlp-pd", "type": "BG_CPUIO" }
+
+# Throttled
+{ "name": "throttled", "type": "BG_CPUIO" }
