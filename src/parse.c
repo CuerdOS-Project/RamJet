@@ -2,22 +2,29 @@
  * RamJet - Rice clone in C
  * Copyright (c) 2026 - Ported from Rust by Alecaishere/CuerdOS Dev. Team
  *
- * Line parser, directory walker and small flat-JSON accessor.
+ * Line parser, deterministic directory walker and small flat-JSON accessor.
  */
 #include "parse.h"
+#include "log.h"
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
-#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
-static _Thread_local struct {
-    const char *ext;
-    parse_line_cb cb;
-    void *user_data;
-    int had_error;
-} walk_ctx;
+/* djb2 hash shared by the rule and type maps. */
+unsigned long ramjet_hash(const char *s) {
+    unsigned long h = 5381;
+    int c;
+    while ((c = (unsigned char)*s++)) h = ((h << 5) + h) + c;
+    return h;
+}
+
+/* ------------------------------------------------------------------ */
+/* Flat JSON accessors                                                 */
+/* ------------------------------------------------------------------ */
 
 static const char *skip_ws(const char *p) {
     while (*p && isspace((unsigned char)*p)) p++;
@@ -140,6 +147,43 @@ int json_get_int(const char *json, const char *key, long *out) {
     return 1;
 }
 
+/* ------------------------------------------------------------------ */
+/* "key = value" lines (ananicy.conf)                                  */
+/* ------------------------------------------------------------------ */
+
+int parse_kv_line(const char *line, char *key, size_t key_size,
+                  char *value, size_t value_size) {
+    const char *p, *eq, *ke, *v, *ve;
+    size_t klen, vlen;
+
+    if (!line || !key || !value || key_size == 0 || value_size == 0) return -1;
+    p = skip_ws(line);
+    if (!*p || *p == '#') return 0;
+
+    eq = strchr(p, '=');
+    if (!eq) return -1;
+
+    ke = eq;
+    while (ke > p && isspace((unsigned char)ke[-1])) ke--;
+    klen = (size_t)(ke - p);
+    if (klen == 0 || klen >= key_size) return -1;
+    memcpy(key, p, klen);
+    key[klen] = '\0';
+
+    v = skip_ws(eq + 1);
+    ve = v + strlen(v);
+    while (ve > v && isspace((unsigned char)ve[-1])) ve--;
+    vlen = (size_t)(ve - v);
+    if (vlen == 0 || vlen >= value_size) return -1;
+    memcpy(value, v, vlen);
+    value[vlen] = '\0';
+    return 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Line file parsing                                                   */
+/* ------------------------------------------------------------------ */
+
 int parse_file(FILE *fp, parse_line_cb cb, void *user_data) {
     char *line = NULL;
     size_t cap = 0;
@@ -164,6 +208,13 @@ int parse_file(FILE *fp, parse_line_cb cb, void *user_data) {
     return ret;
 }
 
+/* ------------------------------------------------------------------ */
+/* Deterministic directory walker.                                     */
+/* nftw(3) traverses in readdir order, so "00-..." override files had  */
+/* no guaranteed priority: files are collected and parsed in sorted    */
+/* path order instead.                                                 */
+/* ------------------------------------------------------------------ */
+
 static int has_extension(const char *filename, const char *ext) {
     const char *dot;
     if (!filename || !ext) return 0;
@@ -171,43 +222,103 @@ static int has_extension(const char *filename, const char *ext) {
     return dot && strcmp(dot + 1, ext) == 0;
 }
 
-static int nftw_callback(const char *fpath, const struct stat *sb,
-                         int typeflag, struct FTW *ftwbuf) {
-    (void)sb;
-    (void)ftwbuf;
-    if (typeflag != FTW_F) return 0;
+typedef struct {
+    char **items;
+    size_t count, cap;
+} PathList;
 
-    const char *base = strrchr(fpath, '/');
-    base = base ? base + 1 : fpath;
-    if (!has_extension(base, walk_ctx.ext)) return 0;
+static void path_list_free(PathList *pl) {
+    for (size_t i = 0; i < pl->count; i++) free(pl->items[i]);
+    free(pl->items);
+    pl->items = NULL;
+    pl->count = pl->cap = 0;
+}
 
-    FILE *fp = fopen(fpath, "r");
-    if (!fp) {
-        fprintf(stderr, "[ramjet] warn: failed to open %s: %s\n", fpath, strerror(errno));
-        walk_ctx.had_error = 1;
-        return 0;
+static int path_list_add(PathList *pl, const char *path) {
+    if (pl->count == pl->cap) {
+        size_t ncap = pl->cap ? pl->cap * 2 : 64;
+        char **nitems = realloc(pl->items, ncap * sizeof(*nitems));
+        if (!nitems) return -1;
+        pl->items = nitems;
+        pl->cap = ncap;
     }
-    if (parse_file(fp, walk_ctx.cb, walk_ctx.user_data) != 0) {
-        fprintf(stderr, "[ramjet] warn: error parsing %s\n", fpath);
-        walk_ctx.had_error = 1;
-    }
-    fclose(fp);
+    char *dup = strdup(path);
+    if (!dup) return -1;
+    pl->items[pl->count++] = dup;
     return 0;
+}
+
+static int collect_files(const char *dir, const char *ext, int depth, PathList *pl) {
+    char full[PATH_MAX + 256];
+    DIR *d;
+    struct dirent *ent;
+
+    if (depth > 8) return 0; /* sanity limit for recursive configs */
+    d = opendir(dir);
+    if (!d) {
+        rj_log(RJ_LOG_WARN, "failed to open %s: %s", dir, strerror(errno));
+        return -1;
+    }
+    while ((ent = readdir(d)) != NULL) {
+        struct stat st;
+        int rc, type = 0; /* 1 = dir, 2 = regular file */
+
+        if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..")) continue;
+        rc = snprintf(full, sizeof(full), "%s/%s", dir, ent->d_name);
+        if (rc < 0 || (size_t)rc >= sizeof(full)) continue;
+
+        if (ent->d_type == DT_DIR) {
+            type = 1;
+        } else if (ent->d_type == DT_REG) {
+            type = 2;
+        } else if (ent->d_type == DT_UNKNOWN) {
+            if (lstat(full, &st) != 0) continue;
+            if (S_ISDIR(st.st_mode)) type = 1;
+            else if (S_ISREG(st.st_mode)) type = 2;
+        }
+        /* symlinks and special files are ignored (FTW_PHYS semantics) */
+
+        if (type == 1) {
+            collect_files(full, ext, depth + 1, pl);
+        } else if (type == 2 && has_extension(ent->d_name, ext)) {
+            if (path_list_add(pl, full) != 0)
+                rj_log(RJ_LOG_WARN, "out of memory collecting %s", full);
+        }
+    }
+    closedir(d);
+    return 0;
+}
+
+static int cmp_path(const void *a, const void *b) {
+    return strcmp(*(const char *const *)a, *(const char *const *)b);
 }
 
 int walk_config_dir(const char *root_dir, const char *ext,
                     parse_line_cb cb, void *user_data) {
-    if (!root_dir || !ext || !cb) return -1;
-    walk_ctx.ext = ext;
-    walk_ctx.cb = cb;
-    walk_ctx.user_data = user_data;
-    walk_ctx.had_error = 0;
+    PathList pl = { 0 };
+    int had_error = 0;
 
-    errno = 0;
-    if (nftw(root_dir, nftw_callback, 16, FTW_PHYS) != 0) {
-        fprintf(stderr, "[ramjet] warn: failed to walk %s: %s\n",
-                root_dir, strerror(errno));
+    if (!root_dir || !ext || !cb) return -1;
+    if (collect_files(root_dir, ext, 0, &pl) != 0) {
+        path_list_free(&pl);
         return -1;
     }
-    return walk_ctx.had_error ? -1 : 0;
+    if (pl.count > 1)
+        qsort(pl.items, pl.count, sizeof(char *), cmp_path);
+
+    for (size_t i = 0; i < pl.count; i++) {
+        FILE *fp = fopen(pl.items[i], "r");
+        if (!fp) {
+            rj_log(RJ_LOG_WARN, "failed to open %s: %s", pl.items[i], strerror(errno));
+            had_error = 1;
+            continue;
+        }
+        if (parse_file(fp, cb, user_data) != 0) {
+            rj_log(RJ_LOG_WARN, "error parsing %s", pl.items[i]);
+            had_error = 1;
+        }
+        fclose(fp);
+    }
+    path_list_free(&pl);
+    return had_error ? -1 : 0;
 }

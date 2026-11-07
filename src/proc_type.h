@@ -6,14 +6,17 @@
 #define RAMJET_PROC_TYPE_H
 
 #include "class.h"
+
 #define PROC_TYPE_NAME_MAX 256
 
 typedef struct {
     char name[PROC_TYPE_NAME_MAX];
     int nice;
+    int has_nice;
     IoClass ioclass;
     int has_ioclass;
     int ionice;
+    int has_ionice;
     int oom_score_adj;
     int has_oom_score_adj;
 } ProcType;
@@ -32,6 +35,7 @@ void proc_type_map_init(ProcTypeMap *map);
 void proc_type_map_free(ProcTypeMap *map);
 void proc_type_map_insert(ProcTypeMap *map, const ProcType *pt);
 const ProcType *proc_type_map_get(const ProcTypeMap *map, const char *name);
-int build_types(ProcTypeMap *map);
+int proc_type_map_count(const ProcTypeMap *map);
+int build_types(ProcTypeMap *map, const char *config_dir);
 
 #endif

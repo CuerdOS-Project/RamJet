@@ -1,12 +1,32 @@
-RamJet fixed build
-Date: 2026-09-03
+RamJet optimized build
+Version: 1.3.0
+Date: 2026-11-07
 Target: Linux x86_64 (build environment)
 
-Validation:
-- make
-- make test
-- make analyze (clang static analyzer)
-- ASan/UBSan build + tests (passed)
+Changes in this tree (optimization pass):
+- PID cache keyed by (pid, starttime) with num_threads growth detection and
+  periodic TTL rebuild; unchanged processes are skipped entirely.
+- Single rule resolution per process; threads reuse the leader's rule.
+- "/proc/<pid>/exe" names with the " (deleted)" suffix match their rules again.
+- oom_score_adj written with open(2)/write(2)/close(2); no stdio buffering,
+  no FILE* leak on write errors.
+- ESRCH (process gone) is not an error anymore; persistent errors are
+  logged once per (rule, operation, errno) instead of every cycle.
+- nice/ionice presence tracked with has_* flags (nice = -1 is now valid).
+- ionice without ioclass defaults to best-effort, as Ananicy does.
+- Config files parsed in deterministic sorted order (replaces nftw).
+- ananicy.conf is parsed and honored (check_freq, apply_* flags, loglevel...).
+- CLI flags (-c, -f, -t, -T, -l, -n, -d, -V, -h) and SIGHUP reload.
+- Dead code removed: src/cJSON.c and src/cJSON.h were never compiled.
 
-The source tree intentionally does not include cJSON.c/cJSON.h: the original dependency was replaced by a small flat-JSON parser tailored to the Ananicy objects RamJet consumes.
-The cgroup implementation remains cgroup-v1 CPU-controller only.
+Validation performed on this tree:
+- make (gcc, -Wall -Wextra -Wpedantic -std=c11: no warnings)
+- make test (unit tests: parsing, kv config, effective values, self
+  application, ESRCH handling, PID cache semantics)
+- gcc -fanalyzer: clean
+- ASan/UBSan build + tests + short live run: clean
+- Functional run: nice/ionice/oom application, "(deleted)" exe matching,
+  SIGHUP reload, cache-hit skipping
+
+The flat-JSON parser in parse.c is the only JSON implementation used.
+Cgroup management is not part of RamJet.

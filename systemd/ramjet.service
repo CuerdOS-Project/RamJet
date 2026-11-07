@@ -1,24 +1,36 @@
 [Unit]
 Description=ramjet - process priority daemon
 Documentation=https://github.com/CuerdOS-Project/RamJet
-After=multi-user.target
-Wants=multi-user.target
+# Start early: processes need their priorities the most during boot.
+After=systemd-sysctl.service
+Before=multi-user.target
 
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/ramjet
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=5
+Nice=-5
+OOMScoreAdjust=-999
 
 # Security hardening
+NoNewPrivileges=true
+# CAP_SYS_NICE: renice, CAP_SYS_RESOURCE: oom_score_adj, CAP_SYS_ADMIN:
+# realtime ioprio class (only needed if 'realtime' rules are used).
+CapabilityBoundingSet=CAP_SYS_NICE CAP_SYS_RESOURCE CAP_SYS_ADMIN
+PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-PrivateTmp=true
-ReadWritePaths=/sys/fs/cgroup
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=ramjet
-LimitNICE=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_UNIX
+MemoryDenyWriteExecute=true
+LockPersonality=true
+RestrictRealtime=true
+SystemCallArchitectures=native
 
 [Install]
 WantedBy=multi-user.target
