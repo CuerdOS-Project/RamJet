@@ -15,3 +15,6 @@
 
 # socklog
 { "name": "socklog", "type": "BG_CPUIO" }
+
+# nanoklogd
+{ "name": "nanoklogd", "type": "BG_CPUIO" }
